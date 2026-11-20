@@ -289,3 +289,67 @@ export async function disconnectGoogle(userId) {
 
   return { disconnected: true };
 }
+
+
+export async function sendGoogleEmail(userId, { to, subject, body }) {
+  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(to || ""))) {
+    throw new Error("Enter a valid recipient email address.");
+  }
+  if (!String(subject || "").trim() || !String(body || "").trim()) {
+    throw new Error("Email subject and message are required.");
+  }
+
+  const config = getConfig();
+  const db = adminClient(config);
+  const { data: connection, error } = await db
+    .from("google_connections")
+    .select("encrypted_refresh_token")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error || !connection?.encrypted_refresh_token) {
+    throw new Error("Connect Google in Integrations before sending email.");
+  }
+
+  const refreshToken = decryptGoogleRefreshToken(connection.encrypted_refresh_token);
+  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: config.GOOGLE_CLIENT_ID,
+      client_secret: config.GOOGLE_CLIENT_SECRET,
+      refresh_token: refreshToken,
+      grant_type: "refresh_token"
+    })
+  });
+  const tokens = await tokenResponse.json();
+  if (!tokenResponse.ok || !tokens.access_token) {
+    throw new Error("Google authorization expired. Reconnect Google and try again.");
+  }
+
+  const encodedSubject = `=?UTF-8?B?${Buffer.from(String(subject).trim()).toString("base64")}?=`;
+  const mime = [
+    `To: ${to}`,
+    `Subject: ${encodedSubject}`,
+    "MIME-Version: 1.0",
+    'Content-Type: text/plain; charset="UTF-8"',
+    "Content-Transfer-Encoding: 8bit",
+    "",
+    String(body).replace(/\\r?\\n/g, "\\r\\n")
+  ].join("\\r\\n");
+  const raw = Buffer.from(mime, "utf8").toString("base64url");
+
+  const sendResponse = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${tokens.access_token}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ raw })
+  });
+  const sent = await sendResponse.json();
+  if (!sendResponse.ok) {
+    throw new Error("Gmail could not send this message. Check the Google connection and Gmail API permissions.");
+  }
+  return { messageId: sent.id || null, threadId: sent.threadId || null };
+}
