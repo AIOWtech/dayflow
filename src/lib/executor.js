@@ -61,7 +61,7 @@ async function publicHttpsUrl(raw) {
   if (url.protocol !== "https:" || url.username || url.password) {
     throw new Error("Dayflow browser tasks only open public HTTPS pages.");
   }
-  const host = url.hostname.toLowerCase().replace(/^\\[|\\]$/g, "");
+  const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (host === "localhost" || host.endsWith(".local")) {
     throw new Error("Private and local network addresses are not allowed.");
   }
