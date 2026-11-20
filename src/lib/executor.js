@@ -55,7 +55,7 @@ async function tavilySearch(query) {
   })).filter(item => item.url);
 }
 
-function publicHttpsUrl(raw) {
+async function publicHttpsUrl(raw) {
   let url;
   try { url = new URL(raw); } catch { throw new Error("Include a complete public https:// URL in the browser task."); }
   if (url.protocol !== "https:" || url.username || url.password) {
@@ -94,7 +94,7 @@ async function browsePublicPage(instruction) {
   }
   const match = instruction.match(/https:\/\/[^\s<>"']+/i);
   if (!match) throw new Error("Add the public HTTPS page URL you want Dayflow to inspect.");
-  const url = publicHttpsUrl(match[0].replace(/[),.;]+$/, ""));
+  const url = await publicHttpsUrl(match[0].replace(/[),.;]+$/, ""));
   const sessionResponse = await fetch("https://api.browserbase.com/v1/sessions", {
     method: "POST",
     headers: {
