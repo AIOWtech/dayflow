@@ -1,4 +1,6 @@
 import { chromium } from "playwright-core";
+import { lookup } from "node:dns/promises";
+import { isIP } from "node:net";
 
 async function ai(messages, json = false) {
   if (!process.env.OPENROUTER_API_KEY) {
@@ -59,10 +61,28 @@ function publicHttpsUrl(raw) {
   if (url.protocol !== "https:" || url.username || url.password) {
     throw new Error("Dayflow browser tasks only open public HTTPS pages.");
   }
-  const host = url.hostname.toLowerCase();
-  if (host === "localhost" || host.endsWith(".local") ||
-      /^(127\.|10\.|192\.168\.|169\.254\.)/.test(host) ||
-      /^172\.(1[6-9]|2\d|3[01])\./.test(host)) {
+  const host = url.hostname.toLowerCase().replace(/^\\[|\\]$/g, "");
+  if (host === "localhost" || host.endsWith(".local")) {
+    throw new Error("Private and local network addresses are not allowed.");
+  }
+  const records = await lookup(host, { all: true, verbatim: true }).catch(() => []);
+  if (!records.length) throw new Error("The browser task host could not be resolved.");
+  const privateAddress = address => {
+    if (isIP(address) === 4) {
+      const octets = address.split(".").map(Number);
+      return octets[0] === 0 || octets[0] === 10 || octets[0] === 127 ||
+        octets[0] >= 224 || (octets[0] === 169 && octets[1] === 254) ||
+        (octets[0] === 172 && octets[1] >= 16 && octets[1] <= 31) ||
+        (octets[0] === 192 && octets[1] === 168);
+    }
+    const value = address.toLowerCase();
+    return value === "::1" || value === "::" || value.startsWith("fc") ||
+      value.startsWith("fd") || value.startsWith("fe8") ||
+      value.startsWith("fe9") || value.startsWith("fea") ||
+      value.startsWith("feb") || value.startsWith("::ffff:127.") ||
+      value.startsWith("::ffff:10.") || value.startsWith("::ffff:192.168.");
+  };
+  if (records.some(record => privateAddress(record.address))) {
     throw new Error("Private and local network addresses are not allowed.");
   }
   return url.toString();
