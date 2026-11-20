@@ -29,6 +29,7 @@ app.use(express.json({ limit: "1mb" }));
 app.use("/api", rateLimit({
   windowMs: 60_000,
   limit: 120,
+  validate: { forwardedHeader: false },
   standardHeaders: "draft-8",
   legacyHeaders: false
 }));
