@@ -448,26 +448,6 @@ app.post("/api/email/draft", requireUser, async (req, res) => {
   }
 });
 
-app.post("/api/email/send", requireUser, async (req, res) => {
-  const schema = z.object({
-    to: z.string().email().max(254),
-    subject: z.string().trim().min(1).max(250),
-    body: z.string().trim().min(1).max(20000),
-    approved: z.literal(true)
-  });
-  const parsed = schema.safeParse(req.body);
-  if (!parsed.success) {
-    return res.status(400).json({ error: "A valid recipient, subject, message and explicit approval are required." });
-  }
-  try {
-    const sent = await sendGoogleEmail(req.user.id, parsed.data);
-    res.json({ sent: true, messageId: sent.messageId });
-  } catch (error) {
-    console.error("Email send:", error.message);
-    res.status(502).json({ error: error.message });
-  }
-});
-
 
 app.get(
   "/api/connectors/google/status",
