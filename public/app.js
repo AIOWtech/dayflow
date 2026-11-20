@@ -108,7 +108,7 @@ S.authChannel="email";S.phoneOtpSent=false;
 function syncAuthForm(){
  const phone=S.authChannel==="phone",signup=S.authMode==="signup";
  $("emailAuthTab").classList.toggle("active",!phone);$("phoneAuthTab").classList.toggle("active",phone);
- $("authNameWrap").hidden=!(signup||phone);$("authRoleWrap").hidden=!(signup||phone);$("authTimezoneWrap").hidden=!(signup||phone);
+ $("authNameWrap").hidden=!(signup||phone);$("authRoleWrap").hidden=!(signup||phone);$("authTimezoneWrap").hidden=!(signup||phone);$("authProfilePhoneWrap").hidden=!(signup&&!phone);
  $("authEmailWrap").hidden=phone;$("authPasswordWrap").hidden=phone;$("authPhoneWrap").hidden=!phone;$("authOtpWrap").hidden=!phone||!S.phoneOtpSent;
  $("forgotPasswordButton").hidden=phone||signup;
  $("authSubmit").textContent=phone?(S.phoneOtpSent?"Verify code & continue":"Send SMS code ↗"):(signup?"Create account ↗":"Sign in ↗");
@@ -122,7 +122,7 @@ $("phoneAuthTab").onclick=()=>{S.authChannel="phone";S.phoneOtpSent=false;syncAu
 $("authModeButton").onclick=()=>{S.authMode=S.authMode==="signin"?"signup":"signin";S.phoneOtpSent=false;syncAuthForm();$("authModeButton").textContent=S.authMode==="signup"?"Sign in instead":"Create an account";$("switchText").textContent=S.authMode==="signup"?"Already have an account?":"New to Dayflow?";};
 $("authForm").onsubmit=async e=>{
  e.preventDefault();if(!S.supabase)return $("authMessage").textContent="Supabase isn't ready yet.";
- const profile={full_name:$("authName").value.trim(),role:$("authRole").value,timezone:$("authTimezone").value.trim()};
+ const profile={full_name:$("authName").value.trim(),role:$("authRole").value,timezone:$("authTimezone").value.trim(),phone:S.authChannel==="phone"?$("authPhone").value.trim():$("authProfilePhone").value.trim()};
  const submit=$("authSubmit");submit.disabled=true;
  try{
   if(S.authChannel==="phone"){
@@ -141,7 +141,7 @@ $("authForm").onsubmit=async e=>{
   if(S.authMode==="signup"){
    if(!profile.full_name)throw Error("Please enter your full name.");
    if(password.length<8)throw Error("Use a password with at least 8 characters.");
-   result=await S.supabase.auth.signUp({email,password,options:{data:{...profile,phone:$("authPhone")?.value?.trim()||""}}});
+   result=await S.supabase.auth.signUp({email,password,options:{data:profile}});
   }else result=await S.supabase.auth.signInWithPassword({email,password});
   if(result.error)throw result.error;
   if(result.data.session)await enter(result.data.session);else $("authMessage").textContent="Account created. Check your email to confirm, then sign in.";
