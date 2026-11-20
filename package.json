@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "check": "node --check src/server.js && node --check src/lib/auth.js && node --check src/lib/supabase-store.js && node --check public/app.js",
+    "check": "node --check src/server.js && node --check src/lib/auth.js && node --check src/lib/google-oauth.js && node --check src/lib/executor.js && node --check src/lib/supabase-store.js && node --check public/app.js",
     "test": "node --test"
   },
   "dependencies": {
