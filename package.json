@@ -9,7 +9,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
-    "check": "node --check src/server.js && node --check src/lib/auth.js && node --check src/lib/supabase-store.js && node --check public/app.js",
+    "check": "node --check src/server.js && node --check src/lib/auth.js && node --check src/lib/google-oauth.js && node --check src/lib/executor.js && node --check src/lib/supabase-store.js && node --check public/app.js",
     "test": "node --test"
   },
   "dependencies": {
@@ -18,6 +18,7 @@
     "express": "^5.1.0",
     "express-rate-limit": "^8.1.0",
     "helmet": "^8.1.0",
-    "zod": "^3.25.76"
+    "zod": "^3.25.76",
+    "playwright-core": "^1.56.1"
   }
 }

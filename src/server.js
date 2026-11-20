@@ -35,8 +35,10 @@ import {
   createGoogleAuthorization,
   completeGoogleAuthorization,
   getGoogleConnection,
-  disconnectGoogle
+  disconnectGoogle,
+  sendGoogleEmail
 } from "./lib/google-oauth.js";
+import { executeTask } from "./lib/executor.js";
 app.locals.supabase = createAuthClient();
 
 function userDb(req) {
@@ -299,13 +301,82 @@ app.post(
   }
 );
 
-app.post("/api/tasks/:id/run", requireUser, (_req, res) => {
-  res.status(501).json({
-    error:
-      "Task execution is not connected yet. Your task and plan " +
-      "are saved, but Dayflow will not mark them complete until " +
-      "the execution engine is implemented."
-  });
+app.post("/api/tasks/:id/run", requireUser, async (req, res) => {
+  const db = userDb(req);
+  try {
+    let task = await getTask(db, req.user.id, req.params.id);
+    if (!task) return res.status(404).json({ error: "Task not found." });
+
+    if (task.mode === "email" && task.status === "awaiting_approval" && !task.approval?.approved) {
+      return res.status(409).json({ error: "Review and approve this email before sending." });
+    }
+
+    if (task.mode === "email" && task.status === "awaiting_approval" && task.approval?.approved && task.result?.kind === "email") {
+      const claim = await db
+        .from("tasks")
+        .update({ status: "running", updated_at: new Date().toISOString() })
+        .eq("id", task.id)
+        .eq("created_by", req.user.id)
+        .eq("status", "awaiting_approval")
+        .select("id")
+        .maybeSingle();
+      if (claim.error) throw new Error("Could not reserve this email for sending.");
+      if (!claim.data) return res.status(409).json({ error: "This email is already being processed or has already been sent." });
+
+      const sent = await sendGoogleEmail(req.user.id, {
+        to: task.result.to,
+        subject: task.result.subject,
+        body: task.result.body
+      });
+      task = await updateTask(db, req.user.id, task.id, current => {
+        current.status = "completed";
+        current.result = {
+          ...current.result,
+          summary: "Email sent successfully.",
+          sentAt: new Date().toISOString(),
+          messageId: sent.messageId
+        };
+        addEvent(current, "success", "Approved email sent through Gmail.");
+      });
+      return res.json(task);
+    }
+
+    if (task.status === "completed") return res.json(task);
+
+    task = await updateTask(db, req.user.id, task.id, current => {
+      current.status = "running";
+      addEvent(current, "info", "Execution started.");
+    });
+
+    const output = await executeTask(task);
+    task = await updateTask(db, req.user.id, task.id, current => {
+      current.status = output.status;
+      if (output.plan) current.plan = output.plan;
+      if (output.internalPlan) current.internalPlan = output.internalPlan;
+      if (output.approval) current.approval = output.approval;
+      if (output.result) current.result = output.result;
+      addEvent(
+        current,
+        output.status === "awaiting_approval" ? "info" : "success",
+        output.status === "awaiting_approval"
+          ? "Draft is ready and waiting for your approval."
+          : "Task execution completed."
+      );
+    });
+    return res.json(task);
+  } catch (error) {
+    console.error("Task execution:", error.message);
+    try {
+      const failed = await updateTask(db, req.user.id, req.params.id, current => {
+        current.status = "failed";
+        addEvent(current, "error", error.message.slice(0, 500));
+      });
+      if (failed) return res.status(502).json({ error: error.message, task: failed });
+    } catch (saveError) {
+      console.error("Could not persist execution failure:", saveError.message);
+    }
+    return res.status(502).json({ error: error.message || "Task execution failed." });
+  }
 });
 
 app.post("/api/email/draft", requireUser, async (req, res) => {
@@ -375,14 +446,6 @@ app.post("/api/email/draft", requireUser, async (req, res) => {
       error: "Couldn't generate a draft. Check the AI configuration."
     });
   }
-});
-
-app.post("/api/email/send", requireUser, (_req, res) => {
-  res.status(501).json({
-    error:
-      "Email sending is not connected yet. Configure and test " +
-      "a provider integration before enabling delivery."
-  });
 });
 
 
@@ -470,16 +533,6 @@ app.post(
   }
 );
 
-
-app.get(
-  "/api/connectors/google/start",
-  requireUser,
-  (_req, res) => {
-    res.status(501).json({
-      error: "Google OAuth is not implemented yet."
-    });
-  }
-);
 
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "API endpoint not found." });
