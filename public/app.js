@@ -7,8 +7,8 @@ const pretty=s=>String(s||"unknown").replaceAll("_"," ").replace(/\b\w/g,c=>c.to
 const date=s=>s?new Date(s).toLocaleString([],{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"—";
 const icon=m=>({document:"▤",email:"✉",browser:"◉",research:"⌕",plan:"✦"}[m]||"✦");
 function toast(msg,type=""){const n=document.createElement("div");n.className=`toast ${type}`;n.textContent=msg;$("toastRegion").append(n);setTimeout(()=>n.remove(),4000)}
-async function loadConfig(){try{const r=await fetch("/api/config",{cache:"no-store"});if(!r.ok)throw Error(`Configuration endpoint returned ${r.status}`);S.config=await r.json();if(!S.config.supabaseUrl||!S.config.supabasePublishableKey){$("authMessage").textContent="Supabase isn't configured. Add the URL and publishable key in Vercel.";return}S.supabase=createClient(S.config.supabaseUrl,S.config.supabasePublishableKey);const {data,error}=await S.supabase.auth.getSession();if(error)throw error;if(data.session)await enter(data.session);else $("authMessage").textContent="Secure sign-in is ready.";S.supabase.auth.onAuthStateChange((_e,session)=>{if(session)enter(session);else{$("authGate").hidden=false;$("appShell").hidden=true;S.session=null}})}catch(e){$("authMessage").textContent="Dayflow couldn't reach /api/config. Check Vercel routing and runtime logs.";console.error(e)}}
-async function enter(session){S.session=session;$("authGate").hidden=true;$("appShell").hidden=false;const email=session.user?.email||"Your account";$("userName").textContent=email.split("@")[0];$("userEmail").textContent=email;$("userAvatar").textContent=$("topAvatar").textContent=(email[0]||"U").toUpperCase();await Promise.all([loadHealth(),loadTasks(),loadGoogleStatus()]);
+async function loadConfig(){try{const r=await fetch("/api/config",{cache:"no-store"});if(!r.ok)throw Error(`Configuration endpoint returned ${r.status}`);S.config=await r.json();if(!S.config.supabaseUrl||!S.config.supabasePublishableKey){$("authMessage").textContent="Supabase isn't configured. Add the URL and publishable key in Vercel.";return}S.supabase=createClient(S.config.supabaseUrl,S.config.supabasePublishableKey);const {data,error}=await S.supabase.auth.getSession();if(error)throw error;if(data.session)await enter(data.session);else $("authMessage").textContent="Secure sign-in is ready.";S.supabase.auth.onAuthStateChange((_e,session)=>{if(session)enter(session);else{$("landingPage").hidden=false;$("authGate").hidden=true;$("appShell").hidden=true;S.session=null}})}catch(e){$("authMessage").textContent="Dayflow couldn't reach /api/config. Check Vercel routing and runtime logs.";console.error(e)}}
+async function enter(session){S.session=session;$("landingPage").hidden=true;$("authGate").hidden=true;$("appShell").hidden=false;const user=session.user||{};const email=user.email||user.phone||"Your account";const meta=user.user_metadata||{};const displayName=meta.full_name||meta.name||email.split("@")[0];$("userName").textContent=displayName;$("userEmail").textContent=email;$("userAvatar").textContent=$("topAvatar").textContent=(displayName[0]||"U").toUpperCase();await Promise.all([loadHealth(),loadTasks(),loadGoogleStatus()]);
 render()
                              }
 async function api(url,opt={}){const h={...(opt.headers||{})};if(S.session?.access_token)h.Authorization=`Bearer ${S.session.access_token}`;if(opt.body)h["Content-Type"]="application/json";const r=await fetch(url,{...opt,headers:h});const t=await r.text();let data={};try{data=t?JSON.parse(t):{}}catch{data={error:t}}if(!r.ok)throw Error(data.error||`Request failed (${r.status})`);return data}
@@ -91,7 +91,7 @@ $("authModeButton").onclick=()=>{S.authMode=S.authMode==="signin"?"signup":"sign
 $("authForm").onsubmit=async e=>{e.preventDefault();if(!S.supabase)return $("authMessage").textContent="Supabase isn't ready. Check the configuration endpoint.";let email=$("authEmail").value.trim(),password=$("authPassword").value;try{let r=S.authMode==="signup"?await S.supabase.auth.signUp({email,password}):await S.supabase.auth.signInWithPassword({email,password});if(r.error)throw r.error;if(r.data.session)await enter(r.data.session);else $("authMessage").textContent="Account created. Check your email to confirm, then sign in."}catch(err){$("authMessage").textContent=err.message}};
 $("forgotPasswordButton").onclick=async()=>{let email=$("authEmail").value.trim();if(!email)return $("authMessage").textContent="Enter your email first.";try{let {error}=await S.supabase.auth.resetPasswordForEmail(email,{redirectTo:location.origin});if(error)throw error;$("authMessage").textContent="If the account exists, reset instructions have been sent."}catch(e){$("authMessage").textContent=e.message}};
 document.querySelectorAll("[data-provider]").forEach(b=>b.onclick=async()=>{try{let {error}=await S.supabase.auth.signInWithOAuth({provider:b.dataset.provider,options:{redirectTo:location.origin}});if(error)throw error}catch(e){$("authMessage").textContent=e.message}});
-$("signOutButton").onclick=async()=>{await S.supabase?.auth.signOut();S.tasks=[];S.active=null};
+$("signOutButton").onclick=async()=>{await S.supabase?.auth.signOut();S.tasks=[];S.active=null;$("appShell").hidden=true;$("authGate").hidden=true;$("landingPage").hidden=false};
 $("profileButton").onclick=()=>$("profileMenu").hidden=!$("profileMenu").hidden;
 $("mobileMenu").onclick=()=>$("sidebar").classList.add("mobile-open");$("mobileClose").onclick=()=>$("sidebar").classList.remove("mobile-open");
 $("helpButton").onclick=()=>toast("Create a goal, review the plan, and decide what happens next.");
@@ -102,4 +102,58 @@ $("taskForm").onsubmit=async e=>{e.preventDefault();let q=$("taskInstruction").v
 document.addEventListener("click",e=>{let l=e.target.closest("[data-page-link]");if(l)go(l.dataset.pageLink)});
 document.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){e.preventDefault();$("searchModal").hidden? $("searchOpen").click():$("searchModal").hidden=true}if(e.key==="Escape"){$("searchModal").hidden=true;$("taskModal").hidden=true;$("sidebar").classList.remove("mobile-open")}});
 window.addEventListener("hashchange",render);
+
+/* Landing, phone OTP and onboarding profile */
+S.authChannel="email";S.phoneOtpSent=false;
+function syncAuthForm(){
+ const phone=S.authChannel==="phone",signup=S.authMode==="signup";
+ $("emailAuthTab").classList.toggle("active",!phone);$("phoneAuthTab").classList.toggle("active",phone);
+ $("authNameWrap").hidden=!(signup||phone);$("authRoleWrap").hidden=!(signup||phone);$("authTimezoneWrap").hidden=!(signup||phone);
+ $("authEmailWrap").hidden=phone;$("authPasswordWrap").hidden=phone;$("authPhoneWrap").hidden=!phone;$("authOtpWrap").hidden=!phone||!S.phoneOtpSent;
+ $("forgotPasswordButton").hidden=phone||signup;
+ $("authSubmit").textContent=phone?(S.phoneOtpSent?"Verify code & continue":"Send SMS code ↗"):(signup?"Create account ↗":"Sign in ↗");
+ $("authTitle").textContent=phone?"Continue with your phone":(signup?"Create your account":"Welcome back");
+ $("authSubtitle").textContent=phone?"We’ll send a one-time code to verify your number.":(signup?"Set up your personal Dayflow workspace.":"Sign in to continue where your ideas left off.");
+}
+function showAuth(mode="signin"){S.authMode=mode;S.authChannel="email";S.phoneOtpSent=false;$("landingPage").hidden=true;$("authGate").hidden=false;$("appShell").hidden=true;syncAuthForm();$("authModeButton").textContent=mode==="signup"?"Sign in instead":"Create an account";$("switchText").textContent=mode==="signup"?"Already have an account?":"New to Dayflow?";}
+document.querySelectorAll("[data-open-auth]").forEach(b=>b.addEventListener("click",()=>showAuth(b.dataset.openAuth)));
+$("emailAuthTab").onclick=()=>{S.authChannel="email";S.phoneOtpSent=false;syncAuthForm()};
+$("phoneAuthTab").onclick=()=>{S.authChannel="phone";S.phoneOtpSent=false;syncAuthForm()};
+$("authModeButton").onclick=()=>{S.authMode=S.authMode==="signin"?"signup":"signin";S.phoneOtpSent=false;syncAuthForm();$("authModeButton").textContent=S.authMode==="signup"?"Sign in instead":"Create an account";$("switchText").textContent=S.authMode==="signup"?"Already have an account?":"New to Dayflow?";};
+$("authForm").onsubmit=async e=>{
+ e.preventDefault();if(!S.supabase)return $("authMessage").textContent="Supabase isn't ready yet.";
+ const profile={full_name:$("authName").value.trim(),role:$("authRole").value,timezone:$("authTimezone").value.trim()};
+ const submit=$("authSubmit");submit.disabled=true;
+ try{
+  if(S.authChannel==="phone"){
+   const phone=$("authPhone").value.trim();
+   if(!/^\\+[1-9]\\d{7,14}$/.test(phone))throw Error("Enter your number in international format, e.g. +2348012345678.");
+   if(!S.phoneOtpSent){
+    const {error}=await S.supabase.auth.signInWithOtp({phone,options:{shouldCreateUser:true,data:profile}});
+    if(error)throw error;S.phoneOtpSent=true;syncAuthForm();$("authMessage").textContent="SMS code sent. Enter it here to finish signing in.";return;
+   }
+   const token=$("authOtp").value.trim();if(!token)throw Error("Enter the SMS verification code.");
+   const {data,error}=await S.supabase.auth.verifyOtp({phone,token,type:"sms"});if(error)throw error;
+   const saved=await S.supabase.auth.updateUser({data:profile});if(saved.error)throw saved.error;
+   if(data.session)await enter(data.session);return;
+  }
+  const email=$("authEmail").value.trim(),password=$("authPassword").value;let result;
+  if(S.authMode==="signup"){
+   if(!profile.full_name)throw Error("Please enter your full name.");
+   if(password.length<8)throw Error("Use a password with at least 8 characters.");
+   result=await S.supabase.auth.signUp({email,password,options:{data:{...profile,phone:$("authPhone")?.value?.trim()||""}}});
+  }else result=await S.supabase.auth.signInWithPassword({email,password});
+  if(result.error)throw result.error;
+  if(result.data.session)await enter(result.data.session);else $("authMessage").textContent="Account created. Check your email to confirm, then sign in.";
+ }catch(error){$("authMessage").textContent=error.message;}finally{submit.disabled=false;}
+};
+document.querySelectorAll("[data-provider]").forEach(b=>b.onclick=async()=>{
+ try{
+  const redirectTo=window.location.origin+"/";
+  const {error}=await S.supabase.auth.signInWithOAuth({provider:b.dataset.provider,options:{redirectTo}});
+  if(error)throw error;
+ }catch(error){$("authMessage").textContent=error.message+" Check the Supabase redirect allow-list and the provider callback URL.";}
+});
+syncAuthForm();
+
 loadConfig();
