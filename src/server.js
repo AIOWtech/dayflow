@@ -20,6 +20,7 @@ import {
 const app = express();
 
 app.disable("x-powered-by");
+app.set("trust proxy", 1);
 app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false
@@ -28,6 +29,7 @@ app.use(express.json({ limit: "1mb" }));
 app.use("/api", rateLimit({
   windowMs: 60_000,
   limit: 120,
+  validate: { forwardedHeader: false },
   standardHeaders: "draft-8",
   legacyHeaders: false
 }));
