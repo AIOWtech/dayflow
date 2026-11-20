@@ -307,7 +307,22 @@ app.post("/api/tasks/:id/run", requireUser, async (req, res) => {
     let task = await getTask(db, req.user.id, req.params.id);
     if (!task) return res.status(404).json({ error: "Task not found." });
 
-    if (task.mode === "email" && task.approval?.approved && task.result?.kind === "email") {
+    if (task.mode === "email" && task.status === "awaiting_approval" && !task.approval?.approved) {
+      return res.status(409).json({ error: "Review and approve this email before sending." });
+    }
+
+    if (task.mode === "email" && task.status === "awaiting_approval" && task.approval?.approved && task.result?.kind === "email") {
+      const claim = await db
+        .from("tasks")
+        .update({ status: "running", updated_at: new Date().toISOString() })
+        .eq("id", task.id)
+        .eq("created_by", req.user.id)
+        .eq("status", "awaiting_approval")
+        .select("id")
+        .maybeSingle();
+      if (claim.error) throw new Error("Could not reserve this email for sending.");
+      if (!claim.data) return res.status(409).json({ error: "This email is already being processed or has already been sent." });
+
       const sent = await sendGoogleEmail(req.user.id, {
         to: task.result.to,
         subject: task.result.subject,
