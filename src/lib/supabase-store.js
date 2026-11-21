@@ -181,6 +181,7 @@ export async function updateTask(db, userId, taskId, updater) {
       .from("tasks")
       .update({
         status: next.status,
+        mode: next.mode,
         plan: next.plan || [],
         internal_plan: next.internalPlan || null,
         approval: next.approval || null,
