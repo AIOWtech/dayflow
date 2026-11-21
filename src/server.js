@@ -60,7 +60,14 @@ const TaskInput = z.object({
 });
 
 const EmailDraftInput = z.object({
-  instruction: z.string().trim().min(8).max(4000)
+  instruction: z.string().trim().min(8).max(4000),
+  to: z.string().trim().email().max(254)
+});
+
+const EmailSendInput = z.object({
+  to: z.string().trim().email().max(254),
+  subject: z.string().trim().min(1).max(250),
+  body: z.string().trim().min(1).max(20000)
 });
 
 app.get("/api/config", (_req, res) => {
@@ -421,7 +428,7 @@ app.post("/api/email/draft", requireUser, async (req, res) => {
             },
             {
               role: "user",
-              content: parsed.data.instruction
+              content: `Recipient: ${parsed.data.to}\n\nEmail request: ${parsed.data.instruction}`
             }
           ],
           response_format: { type: "json_object" },
@@ -440,9 +447,10 @@ app.post("/api/email/draft", requireUser, async (req, res) => {
     );
 
     res.json({
+      to: parsed.data.to,
       subject: String(draft.subject || "").slice(0, 250),
       body: String(draft.body || "").slice(0, 20000),
-      sendEnabled: false
+      sendEnabled: true
     });
   } catch (error) {
     console.error("Email draft:", error.message);
