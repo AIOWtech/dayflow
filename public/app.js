@@ -201,10 +201,16 @@ $("authForm").onsubmit=async e=>{
 };
 document.querySelectorAll("[data-provider]").forEach(b=>b.onclick=async()=>{
  try{
-  const redirectTo=window.location.origin+"/";
-  const {error}=await S.supabase.auth.signInWithOAuth({provider:b.dataset.provider,options:{redirectTo}});
+  // Always return OAuth users to the canonical production domain, not a Vercel preview alias.
+  const redirectTo="https://dayflow-six-lilac.vercel.app/";
+  const {error}=await S.supabase.auth.signInWithOAuth({
+   provider:b.dataset.provider,
+   options:{redirectTo}
+  });
   if(error)throw error;
- }catch(error){$("authMessage").textContent=error.message+" Check the Supabase redirect allow-list and the provider callback URL.";}
+ }catch(error){
+  $("authMessage").textContent=error.message+" Confirm the production URL is in Supabase Authentication > URL Configuration > Redirect URLs.";
+ }
 });
 syncAuthForm();
 
