@@ -188,3 +188,73 @@ kbd{float:right;background:#ffffff18;border:1px solid #ffffff20;border-radius:5p
 .auth-card select:focus{outline:none;border-color:#819cff;box-shadow:0 0 0 3px #819cff1a}
 .auth-card select option{background:#111a2b;color:#e8edfa}
 .auth-card label:has(select){display:block;color:#c9d3e7}
+
+
+/* DayFlow global visual system — consistent across landing, auth and workspace */
+:root{
+  --df-bg:#0b1020;--df-surface:#111a2b;--df-surface-raised:#17243a;--df-field:#0b1424;
+  --df-border:#2a3954;--df-border-hover:#536b98;--df-text:#edf2ff;--df-muted:#9aa9c3;
+  --df-accent:#879cff;--df-accent-2:#a18af2;--df-focus:0 0 0 3px rgba(129,156,255,.18);
+}
+.auth-tabs{background:#101a2c;border:1px solid var(--df-border);border-radius:12px;padding:4px;gap:5px}
+.auth-tabs button{color:#aab8d0;border:1px solid transparent;border-radius:9px;font-weight:600;transition:background .18s,border-color .18s,color .18s}
+.auth-tabs button:hover{background:#1b2941;color:#eaf0ff;transform:none}
+.auth-tabs button.active{background:linear-gradient(135deg,#25365a,#292544);border-color:#819cff40;color:#f5f7ff;box-shadow:0 3px 12px #0003}
+.auth-card input,.auth-card select,.modal input,.modal textarea,.modal select,
+.form-panel input,.form-panel textarea,.form-panel select,.profile-form input,
+.profile-form textarea,.profile-form select,.search-line input,.task-search input,
+input:not([type=checkbox]):not([type=radio]):not([type=submit]),textarea,select{
+  color:var(--df-text);background-color:var(--df-field);border:1px solid var(--df-border);
+  border-radius:11px;font:500 13px/1.5 "DM Sans",sans-serif;padding:12px 14px;
+  min-height:46px;width:100%;max-width:100%;outline:none;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.025);
+  transition:border-color .18s ease,background-color .18s ease,box-shadow .18s ease;
+}
+textarea{min-height:110px;resize:vertical;line-height:1.65}
+input::placeholder,textarea::placeholder{color:#71819d;opacity:1}
+input:hover,textarea:hover,select:hover{border-color:var(--df-border-hover);background-color:#0e192b}
+input:focus,textarea:focus,select:focus{border-color:var(--df-accent);box-shadow:var(--df-focus);background-color:#0d1729;outline:none}
+input:disabled,textarea:disabled,select:disabled{opacity:.55;cursor:not-allowed}
+select{appearance:none;-webkit-appearance:none;cursor:pointer;padding-right:42px;
+  background-image:linear-gradient(45deg,transparent 50%,#a8b7d4 50%),linear-gradient(135deg,#a8b7d4 50%,transparent 50%);
+  background-position:calc(100% - 19px) 20px,calc(100% - 14px) 20px;
+  background-size:5px 5px;background-repeat:no-repeat}
+select option{background:#111a2b;color:#edf2ff}
+input[type=checkbox],input[type=radio]{width:16px;height:16px;min-height:0;accent-color:#879cff;box-shadow:none}
+.auth-card label,.modal label,.form-panel label,.profile-form label{color:#cbd6eb;font-size:12px;font-weight:600;letter-spacing:.01em}
+.auth-card label input,.auth-card label select,.profile-form label input,.profile-form label textarea,.profile-form label select{margin-top:8px}
+.password-head{margin-top:16px}.password-head label{margin:0}
+.auth-card input:focus,.modal textarea:focus,.form-panel input:focus,.form-panel textarea:focus{border-color:var(--df-accent);box-shadow:var(--df-focus)}
+.profile-form{gap:18px}.profile-form label{display:grid;gap:7px}
+.profile-form input,.profile-form textarea{background:var(--df-field);border-color:var(--df-border);color:var(--df-text)}
+.profile-form textarea{min-height:120px}
+.btn,.oauth button,.search-line button,.chips button,.settings-tabs button,.profile-menu button{
+  transition:transform .18s ease,border-color .18s ease,background .18s ease,color .18s ease,box-shadow .18s ease}
+.btn{min-height:40px}.btn:hover{transform:translateY(-1px)}
+.btn.primary:hover{box-shadow:0 10px 30px #718eff55;filter:brightness(1.07)}
+.btn.secondary:hover,.oauth button:hover{background:#22324e;border-color:#526b9a}
+.text-button:hover{color:#d1dafe;text-decoration:underline}
+.panel,.stat,.feature-banner,.modal,.search-modal,.auth-card,.landing-preview,.landing-features article,.landing-bottom,.welcome-card,.daily-spark{border-color:rgba(137,160,211,.19)}
+.panel,.stat,.feature-banner{backdrop-filter:blur(12px)}.panel{box-shadow:0 14px 38px rgba(0,0,0,.18)}
+.panel h3,.feature-banner h2,.landing-section h2,.landing-bottom h2{letter-spacing:-.35px}
+.integration,.setting-row,.task-row{transition:background .18s ease,border-color .18s ease}
+.task-row{border-radius:10px;padding-left:9px;padding-right:9px}.task-row:hover{background:rgba(126,153,220,.07)}
+.integration:hover,.setting-row:hover{background:rgba(126,153,220,.045)}
+.settings-tabs button{border:1px solid transparent}.settings-tabs button:hover{background:#17243a;color:#eaf0ff}
+.settings-tabs button.active{background:#1c2a45;border-color:#819cff30}
+.profile-menu{backdrop-filter:blur(16px)}.profile-menu button{border-radius:8px}
+.profile-menu button:hover{background:#243451;color:#fff}
+.landing-nav .brand,.auth-art .brand,.mobile-brand,.sidebar .brand{color:#f6f7ff;text-decoration:none;cursor:pointer}
+.landing-nav .brand:hover,.auth-art .brand:hover,.mobile-brand:hover,.sidebar .brand:hover{color:#c5caff}
+.landing-nav nav a:hover{color:#fff}
+.landing-features article{transition:transform .2s ease,border-color .2s ease,background .2s ease}
+.landing-features article:hover{transform:translateY(-3px);border-color:#879cff60;background:#1c2039}
+.chips button:hover{border-color:#819cff75;background:#253657;color:#f0f4ff}
+.search-line:focus-within{border-color:#819cff70}.search-result{transition:background .18s ease}
+.auth-message{line-height:1.5}:focus-visible{outline:2px solid #91a7ff;outline-offset:2px}
+::placeholder{color:#71819d}
+@media(max-width:600px){
+  .auth-card input,.auth-card select,.profile-form input,.profile-form textarea,.profile-form select,
+  .form-panel input,.form-panel textarea,.form-panel select,.modal input,.modal textarea,.modal select{font-size:16px}
+  .landing-nav .brand{font-size:19px}
+}
