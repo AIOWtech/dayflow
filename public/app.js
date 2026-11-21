@@ -29,7 +29,7 @@ function empty(title,desc,btn="Create a task"){return `<div class="empty"><i>✳
 function localGreeting(){
  const now=new Date(),hour=now.getHours(),meta=S.session?.user?.user_metadata||{},email=S.session?.user?.email||S.session?.user?.phone||"";
  const greeting=hour<12?"Good morning":hour<17?"Good afternoon":"Good evening";
- const name=(meta.full_name||meta.name||email.split("@")[0]||"there").trim().split(/\\s+/)[0];
+ const name=(meta.full_name||meta.name||email.split("@")[0]||"there").trim().split(/\s+/)[0];
  const zone=Intl.DateTimeFormat().resolvedOptions().timeZone||"Local time";
  const dateLabel=new Intl.DateTimeFormat(undefined,{weekday:"long",month:"long",day:"numeric"}).format(now);
  return {greeting,name,zone,dateLabel};
@@ -88,10 +88,10 @@ function taskCreateLabel(prompt,mode){
  if(mode==="document")return "Create document";
  if(mode==="email")return "Create email draft";
  if(mode==="browser")return "Run browser task";
- const named=prompt.match(/\\b(?:called|named|titled)\\s+([^,.!?\\n]+)/i);
+ const named=prompt.match(/\b(?:called|named|titled)\s+([^,.!?\n]+)/i);
  if(named)return "Create "+named[1].trim().slice(0,32);
- const object=prompt.match(/\\b(?:create|build|make|develop|launch)\\s+(?:a|an|the)?\\s*([a-z][a-z0-9 -]{1,24})/i);
- if(object)return "Create "+object[1].trim().split(/\\s+(?:for|with|that|to|using)\\b/i)[0].slice(0,28);
+ const object=prompt.match(/\b(?:create|build|make|develop|launch)\s+(?:a|an|the)?\s*([a-z][a-z0-9 -]{1,24})/i);
+ if(object)return "Create "+object[1].trim().split(/\s+(?:for|with|that|to|using)\b/i)[0].slice(0,28);
  return "Create";
 }
 function updateTaskCreateLabel(){const b=$("createTaskButton");if(b)b.textContent=taskCreateLabel($("taskInstruction").value,$("taskMode").value)+" ↗"}
