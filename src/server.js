@@ -56,7 +56,7 @@ const TaskInput = z.object({
     "email",
     "browser",
     "research"
-  ]).default("plan")
+  ]).default("auto")
 });
 
 const EmailDraftInput = z.object({
