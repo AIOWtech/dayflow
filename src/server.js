@@ -461,6 +461,22 @@ app.post("/api/email/draft", requireUser, async (req, res) => {
 });
 
 
+app.post("/api/email/send", requireUser, async (req, res) => {
+  const parsed = EmailSendInput.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: parsed.error.issues[0]?.message || "Enter a valid recipient, subject and message."
+    });
+  }
+  try {
+    const sent = await sendGoogleEmail(req.user.id, parsed.data);
+    return res.json({ sent: true, messageId: sent.messageId });
+  } catch (error) {
+    console.error("Email send:", error.message);
+    return res.status(502).json({ error: error.message || "Gmail could not send this email." });
+  }
+});
+
 app.get(
   "/api/connectors/google/status",
   requireUser,
