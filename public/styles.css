@@ -160,3 +160,31 @@ kbd{float:right;background:#ffffff18;border:1px solid #ffffff20;border-radius:5p
 .spark-icon{font-size:23px;color:#c0a9ff;margin-top:16px}.daily-spark h3{font:700 16px Manrope;margin:3px 0 8px}.daily-spark p{font-size:11px;line-height:1.65;color:#c3c7d8;margin:0 0 10px}.daily-spark>small{font-size:9px;color:#929db8}
 @media(max-width:1050px){.welcome-grid{grid-template-columns:1fr}.welcome-card{min-height:185px}.daily-spark{min-height:165px}}
 @media(max-width:600px){.welcome-card{padding:22px 19px;align-items:flex-start}.welcome-clock{min-width:94px;margin-top:18px}.welcome-clock strong{font-size:28px}.clock-orbit{width:38px;height:38px;border-radius:13px}.welcome-copy h1{font-size:27px}.welcome-copy p{max-width:220px;line-height:1.6}.daily-spark{padding:19px}.spark-top{font-size:8px}}
+
+
+/* Consistent profile select styling */
+.auth-card select{
+  display:block;
+  width:100%;
+  margin-top:8px;
+  appearance:none;
+  -webkit-appearance:none;
+  color:var(--text);
+  background-color:#0b1220;
+  border:1px solid #29364d;
+  border-radius:11px;
+  padding:13px 42px 13px 14px;
+  min-height:48px;
+  font:500 13px "DM Sans",sans-serif;
+  line-height:1.4;
+  cursor:pointer;
+  background-image:linear-gradient(45deg,transparent 50%,#9eacd0 50%),linear-gradient(135deg,#9eacd0 50%,transparent 50%);
+  background-position:calc(100% - 19px) 21px,calc(100% - 14px) 21px;
+  background-size:5px 5px,5px 5px;
+  background-repeat:no-repeat;
+  transition:border-color .18s ease,box-shadow .18s ease,background-color .18s ease;
+}
+.auth-card select:hover{border-color:#52658a;background-color:#101a2b}
+.auth-card select:focus{outline:none;border-color:#819cff;box-shadow:0 0 0 3px #819cff1a}
+.auth-card select option{background:#111a2b;color:#e8edfa}
+.auth-card label:has(select){display:block;color:#c9d3e7}
