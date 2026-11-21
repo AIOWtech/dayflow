@@ -516,7 +516,7 @@ app.post(
 );
 
 app.get("/api/connectors/google/callback", async (req, res) => {
-  const appUrl = process.env.APP_URL || "https://day-flow-iota.vercel.app";
+  const appUrl = process.env.APP_URL || "https://dayflow-six-lilac.vercel.app";
 
   if (req.query.error) {
     return res.redirect(
