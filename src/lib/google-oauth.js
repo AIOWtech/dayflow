@@ -292,7 +292,7 @@ export async function disconnectGoogle(userId) {
 
 
 export async function sendGoogleEmail(userId, { to, subject, body }) {
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(String(to || ""))) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(to || ""))) {
     throw new Error("Enter a valid recipient email address.");
   }
   if (!String(subject || "").trim() || !String(body || "").trim()) {
@@ -335,8 +335,8 @@ export async function sendGoogleEmail(userId, { to, subject, body }) {
     'Content-Type: text/plain; charset="UTF-8"',
     "Content-Transfer-Encoding: 8bit",
     "",
-    String(body).replace(/\\r?\\n/g, "\\r\\n")
-  ].join("\\r\\n");
+    String(body).replace(/\r?\n/g, "\r\n")
+  ].join("\r\n");
   const raw = Buffer.from(mime, "utf8").toString("base64url");
 
   const sendResponse = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/send", {

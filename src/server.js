@@ -50,16 +50,24 @@ function userDb(req) {
 const TaskInput = z.object({
   instruction: z.string().trim().min(8).max(4000),
   mode: z.enum([
+    "auto",
     "plan",
     "document",
     "email",
     "browser",
     "research"
-  ]).default("plan")
+  ]).default("auto")
 });
 
 const EmailDraftInput = z.object({
-  instruction: z.string().trim().min(8).max(4000)
+  instruction: z.string().trim().min(8).max(4000),
+  to: z.string().trim().email().max(254)
+});
+
+const EmailSendInput = z.object({
+  to: z.string().trim().email().max(254),
+  subject: z.string().trim().min(1).max(250),
+  body: z.string().trim().min(1).max(20000)
 });
 
 app.get("/api/config", (_req, res) => {
@@ -138,7 +146,7 @@ app.post("/api/tasks", requireUser, async (req, res) => {
       parsed.data
     );
 
-    if (process.env.OPENROUTER_API_KEY) {
+    if (parsed.data.mode === "plan" && process.env.OPENROUTER_API_KEY) {
       try {
         const response = await fetch(
           "https://openrouter.ai/api/v1/chat/completions",
@@ -353,6 +361,7 @@ app.post("/api/tasks/:id/run", requireUser, async (req, res) => {
     const output = await executeTask(task);
     task = await updateTask(db, req.user.id, task.id, current => {
       current.status = output.status;
+      if (output.mode) current.mode = output.mode;
       if (output.plan) current.plan = output.plan;
       if (output.internalPlan) current.internalPlan = output.internalPlan;
       if (output.approval) current.approval = output.approval;
@@ -419,7 +428,7 @@ app.post("/api/email/draft", requireUser, async (req, res) => {
             },
             {
               role: "user",
-              content: parsed.data.instruction
+              content: `Recipient: ${parsed.data.to}\n\nEmail request: ${parsed.data.instruction}`
             }
           ],
           response_format: { type: "json_object" },
@@ -438,9 +447,10 @@ app.post("/api/email/draft", requireUser, async (req, res) => {
     );
 
     res.json({
+      to: parsed.data.to,
       subject: String(draft.subject || "").slice(0, 250),
       body: String(draft.body || "").slice(0, 20000),
-      sendEnabled: false
+      sendEnabled: true
     });
   } catch (error) {
     console.error("Email draft:", error.message);
@@ -450,6 +460,22 @@ app.post("/api/email/draft", requireUser, async (req, res) => {
   }
 });
 
+
+app.post("/api/email/send", requireUser, async (req, res) => {
+  const parsed = EmailSendInput.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({
+      error: parsed.error.issues[0]?.message || "Enter a valid recipient, subject and message."
+    });
+  }
+  try {
+    const sent = await sendGoogleEmail(req.user.id, parsed.data);
+    return res.json({ sent: true, messageId: sent.messageId });
+  } catch (error) {
+    console.error("Email send:", error.message);
+    return res.status(502).json({ error: error.message || "Gmail could not send this email." });
+  }
+});
 
 app.get(
   "/api/connectors/google/status",
