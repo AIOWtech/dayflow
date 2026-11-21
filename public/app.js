@@ -197,7 +197,14 @@ $("authForm").onsubmit=async e=>{
   }else result=await S.supabase.auth.signInWithPassword({email,password});
   if(result.error)throw result.error;
   if(result.data.session)await enter(result.data.session);else $("authMessage").textContent="Account created. Check your email to confirm, then sign in.";
- }catch(error){$("authMessage").textContent=error.message;}finally{submit.disabled=false;}
+ }catch(error){
+  const details=String(error?.message||"");
+  if(S.authChannel==="phone"&&(error?.code==="sms_send_failed"||details.includes("Invalid From Number")||details.includes("21212"))){
+   $("authMessage").textContent="DayFlow couldn't send the SMS because the Supabase/Twilio sender configuration is invalid. The app request is reaching Supabase; the SMS sender must be corrected in Supabase Auth settings.";
+  }else{
+   $("authMessage").textContent=details||"Authentication failed. Please try again.";
+  }
+ }finally{submit.disabled=false;}
 };
 document.querySelectorAll("[data-provider]").forEach(b=>b.onclick=async()=>{
  try{
