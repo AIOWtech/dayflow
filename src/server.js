@@ -50,6 +50,7 @@ function userDb(req) {
 const TaskInput = z.object({
   instruction: z.string().trim().min(8).max(4000),
   mode: z.enum([
+    "auto",
     "plan",
     "document",
     "email",
@@ -138,7 +139,7 @@ app.post("/api/tasks", requireUser, async (req, res) => {
       parsed.data
     );
 
-    if (process.env.OPENROUTER_API_KEY) {
+    if (parsed.data.mode === "plan" && process.env.OPENROUTER_API_KEY) {
       try {
         const response = await fetch(
           "https://openrouter.ai/api/v1/chat/completions",
@@ -353,6 +354,7 @@ app.post("/api/tasks/:id/run", requireUser, async (req, res) => {
     const output = await executeTask(task);
     task = await updateTask(db, req.user.id, task.id, current => {
       current.status = output.status;
+      if (output.mode) current.mode = output.mode;
       if (output.plan) current.plan = output.plan;
       if (output.internalPlan) current.internalPlan = output.internalPlan;
       if (output.approval) current.approval = output.approval;
