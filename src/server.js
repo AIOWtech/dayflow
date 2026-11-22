@@ -392,8 +392,36 @@ app.post("/api/tasks/:id/run", requireUser, async (req, res) => {
 
     if (task.status === "completed") return res.json(task);
 
+    // Atomically claim the task so two requests cannot execute the same work.
+    // Failed tasks may be retried; already-running or cancelled tasks may not.
+    const claim = await db
+      .from("tasks")
+      .update({
+        status: "running",
+        updated_at: new Date().toISOString()
+      })
+      .eq("id", task.id)
+      .eq("created_by", req.user.id)
+      .in("status", ["planned", "failed"])
+      .select("id")
+      .maybeSingle();
+
+    if (claim.error) {
+      throw new Error("Could not reserve this task for execution.");
+    }
+
+    if (!claim.data) {
+      const latest = await getTask(db, req.user.id, task.id);
+      if (latest?.status === "completed") return res.json(latest);
+      return res.status(409).json({
+        error: latest?.status === "running"
+          ? "This task is already running."
+          : "This task is not ready to execute.",
+        task: latest
+      });
+    }
+
     task = await updateTask(db, req.user.id, task.id, current => {
-      current.status = "running";
       addEvent(current, "info", "Execution started.");
     });
 
