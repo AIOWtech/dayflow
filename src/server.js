@@ -41,6 +41,8 @@ import {
   sendGoogleEmail,
 } from "./lib/google-oauth.js";
 import { executeTask } from "./lib/executor.js";
+import { listProjects, createProject, listMemories, createMemory, deleteMemory, listWorkflows, createWorkflow, deleteWorkflow } from "./lib/workspace-intelligence.js";
+
 app.locals.supabase = createAuthClient();
 
 function userDb(req) {
@@ -561,6 +563,50 @@ app.post(
   }
 );
 
+
+
+const ProjectInput = z.object({ name: z.string().trim().min(2).max(100), description: z.string().trim().max(1000).optional() });
+const MemoryInput = z.object({ category: z.enum(["preference","instruction","project","decision"]).default("preference"), content: z.string().trim().min(1).max(2000) });
+const WorkflowInput = z.object({ name: z.string().trim().min(1).max(100), description: z.string().trim().max(500).optional(), instruction: z.string().trim().min(8).max(4000), mode: z.enum(["auto","plan","research","document","email","browser"]).default("auto") });
+
+app.get("/api/projects", requireUser, async (req,res) => {
+ try { res.json(await listProjects(userDb(req),req.user.id)); }
+ catch(error) { console.error("List projects:",error.message); res.status(500).json({error:"Could not load projects."}); }
+});
+app.post("/api/projects", requireUser, async (req,res) => {
+ const parsed=ProjectInput.safeParse(req.body);
+ if(!parsed.success)return res.status(400).json({error:parsed.error.issues[0]?.message||"Invalid project."});
+ try { res.status(201).json(await createProject(userDb(req),req.user.id,parsed.data)); }
+ catch(error) { console.error("Create project:",error.message); res.status(500).json({error:"Could not create project. Check that migration 001 is installed."}); }
+});
+app.get("/api/memories", requireUser, async (req,res) => {
+ try { res.json(await listMemories(userDb(req))); }
+ catch(error) { console.error("List memories:",error.message); res.status(500).json({error:"Could not load saved memory. Apply migration 003."}); }
+});
+app.post("/api/memories", requireUser, async (req,res) => {
+ const parsed=MemoryInput.safeParse(req.body);
+ if(!parsed.success)return res.status(400).json({error:parsed.error.issues[0]?.message||"Invalid memory."});
+ try { res.status(201).json(await createMemory(userDb(req),req.user.id,parsed.data)); }
+ catch(error) { console.error("Create memory:",error.message); res.status(500).json({error:"Could not save memory. Apply migration 003."}); }
+});
+app.delete("/api/memories/:id", requireUser, async (req,res) => {
+ try { const removed=await deleteMemory(userDb(req),req.params.id); if(!removed)return res.status(404).json({error:"Memory not found."}); res.json({deleted:true}); }
+ catch(error) { console.error("Delete memory:",error.message); res.status(500).json({error:"Could not delete memory."}); }
+});
+app.get("/api/workflows", requireUser, async (req,res) => {
+ try { res.json(await listWorkflows(userDb(req))); }
+ catch(error) { console.error("List workflows:",error.message); res.status(500).json({error:"Could not load workflows. Apply migration 003."}); }
+});
+app.post("/api/workflows", requireUser, async (req,res) => {
+ const parsed=WorkflowInput.safeParse(req.body);
+ if(!parsed.success)return res.status(400).json({error:parsed.error.issues[0]?.message||"Invalid workflow."});
+ try { res.status(201).json(await createWorkflow(userDb(req),req.user.id,parsed.data)); }
+ catch(error) { console.error("Create workflow:",error.message); res.status(500).json({error:"Could not save workflow. Apply migration 003."}); }
+});
+app.delete("/api/workflows/:id", requireUser, async (req,res) => {
+ try { const removed=await deleteWorkflow(userDb(req),req.params.id); if(!removed)return res.status(404).json({error:"Workflow not found."}); res.json({deleted:true}); }
+ catch(error) { console.error("Delete workflow:",error.message); res.status(500).json({error:"Could not delete workflow."}); }
+});
 
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "API endpoint not found." });
