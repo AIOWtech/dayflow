@@ -57,5 +57,5 @@ The second migration adds execution metadata and the server-only Google OAuth co
 
 - Email delivery is never triggered just by generating a draft; a user must review and approve it.
 - Browser automation is limited to reading public HTTPS pages; it does not log into accounts, submit forms or make purchases.
-- Project management, calendar sync, billing/checkout and native DOCX/PDF export remain future product areas.
+- Project management, billing/checkout and native DOCX/PDF export remain future product areas.
 - Do not enable paid subscriptions until billing webhooks and server-side entitlements are implemented.

@@ -12,7 +12,6 @@ const GOOGLE_SCOPES = [
   "openid",
   "email",
   "https://www.googleapis.com/auth/gmail.send",
-  "https://www.googleapis.com/auth/calendar.events",
   "https://www.googleapis.com/auth/drive.file"
 ];
 
@@ -291,11 +290,6 @@ export async function disconnectGoogle(userId) {
   return { disconnected: true };
 }
 
-
-async function googleAccessToken(userId){const config=getConfig(),db=adminClient(config);const {data:connection,error}=await db.from("google_connections").select("encrypted_refresh_token").eq("user_id",userId).maybeSingle();if(error||!connection?.encrypted_refresh_token)throw new Error("Connect Google in Integrations before using Calendar.");const refreshToken=decryptGoogleRefreshToken(connection.encrypted_refresh_token);const tokenResponse=await fetch("https://oauth2.googleapis.com/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:new URLSearchParams({client_id:config.GOOGLE_CLIENT_ID,client_secret:config.GOOGLE_CLIENT_SECRET,refresh_token:refreshToken,grant_type:"refresh_token"})});const tokens=await tokenResponse.json();if(!tokenResponse.ok||!tokens.access_token)throw new Error("Google authorization expired. Reconnect Google and try again.");return tokens.access_token}
-export async function listGoogleCalendarEvents(userId,{timeMin,timeMax,q}={}){const token=await googleAccessToken(userId),url=new URL("https://www.googleapis.com/calendar/v3/calendars/primary/events");url.search=new URLSearchParams({singleEvents:"true",orderBy:"startTime",maxResults:"100",...(timeMin?{timeMin}:{}),...(timeMax?{timeMax}:{}),...(q?{q}:{})}).toString();const response=await fetch(url,{headers:{Authorization:`Bearer ${token}`}}),data=await response.json();if(!response.ok)throw new Error(data.error?.message||"Could not load Google Calendar events.");return data.items||[]}
-export async function createGoogleCalendarEvent(userId,event){const token=await googleAccessToken(userId),response=await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events",{method:"POST",headers:{Authorization:`Bearer ${token}`,"Content-Type":"application/json"},body:JSON.stringify(event)}),data=await response.json();if(!response.ok)throw new Error(data.error?.message||"Could not create calendar event.");return data}
-export async function deleteGoogleCalendarEvent(userId,eventId){const token=await googleAccessToken(userId),response=await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events/${encodeURIComponent(eventId)}`,{method:"DELETE",headers:{Authorization:`Bearer ${token}`}});if(!response.ok&&response.status!==204){const data=await response.json().catch(()=>({}));throw new Error(data.error?.message||"Could not delete calendar event.")}return{deleted:true}}
 
 export async function sendGoogleEmail(userId, { to, subject, body }) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(to || ""))) {
