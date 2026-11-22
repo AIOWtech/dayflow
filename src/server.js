@@ -38,7 +38,10 @@ import {
   completeGoogleAuthorization,
   getGoogleConnection,
   disconnectGoogle,
-  sendGoogleEmail
+  sendGoogleEmail,
+  listGoogleCalendarEvents,
+  createGoogleCalendarEvent,
+  deleteGoogleCalendarEvent
 } from "./lib/google-oauth.js";
 import { executeTask } from "./lib/executor.js";
 app.locals.supabase = createAuthClient();
@@ -545,6 +548,10 @@ app.get("/api/connectors/google/callback", async (req, res) => {
   }
 });
 
+const CalendarEventInput = z.object({summary:z.string().trim().min(1).max(200),description:z.string().max(5000).optional().default(""),location:z.string().max(500).optional().default(""),start:z.string().datetime({offset:true}),end:z.string().datetime({offset:true})});
+app.get("/api/calendar/events",requireUser,async(req,res)=>{try{const timeMin=typeof req.query.timeMin==="string"?req.query.timeMin:new Date(Date.now()-7*86400000).toISOString();const timeMax=typeof req.query.timeMax==="string"?req.query.timeMax:new Date(Date.now()+45*86400000).toISOString();const events=await listGoogleCalendarEvents(req.user.id,{timeMin,timeMax,q:String(req.query.q||"").slice(0,200)});res.json({events})}catch(error){console.error("Calendar list:",error.message);res.status(503).json({error:error.message||"Could not load calendar events."})}});
+app.post("/api/calendar/events",requireUser,async(req,res)=>{const parsed=CalendarEventInput.safeParse(req.body);if(!parsed.success)return res.status(400).json({error:parsed.error.issues[0]?.message||"Invalid event."});if(Date.parse(parsed.data.end)<=Date.parse(parsed.data.start))return res.status(400).json({error:"Event end must be after its start."});try{const event=await createGoogleCalendarEvent(req.user.id,{summary:parsed.data.summary,description:parsed.data.description,location:parsed.data.location,start:{dateTime:parsed.data.start},end:{dateTime:parsed.data.end}});res.status(201).json({event})}catch(error){console.error("Calendar create:",error.message);res.status(503).json({error:error.message||"Could not create calendar event."})}});
+app.delete("/api/calendar/events/:id",requireUser,async(req,res)=>{try{await deleteGoogleCalendarEvent(req.user.id,req.params.id);res.json({deleted:true})}catch(error){console.error("Calendar delete:",error.message);res.status(503).json({error:error.message||"Could not delete calendar event."})}});
 app.post(
   "/api/connectors/google/disconnect",
   requireUser,
