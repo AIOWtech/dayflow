@@ -18,11 +18,11 @@
     },
     {
       "src": "/privacy-policy/?",
-      "dest": "/public/privacy-policy.html"
+      "dest": "/privacy-policy.html"
     },
     {
       "src": "/terms/?",
-      "dest": "/public/terms.html"
+      "dest": "/terms.html"
     },
     {
       "src": "/(.*)",
