@@ -183,7 +183,7 @@ function syncAuthForm(){
  $("authSubtitle").textContent=phone?"We’ll send a one-time code to verify your number.":(signup?"Set up your personal Dayflow workspace.":"Sign in to continue where your ideas left off.");
 }
 function showAuth(mode="signin"){S.authMode=mode;S.authChannel="email";S.phoneOtpSent=false;$("landingPage").hidden=true;$("authGate").hidden=false;$("appShell").hidden=true;syncAuthForm();$("authModeButton").textContent=mode==="signup"?"Sign in instead":"Create an account";$("switchText").textContent=mode==="signup"?"Already have an account?":"New to Dayflow?";}
-window.addEventListener("dayflow:open-auth",event=>showAuth(event.detail?.mode||"signin"));
+document.querySelectorAll("[data-open-auth]").forEach(b=>b.addEventListener("click",()=>showAuth(b.dataset.openAuth)));
 $("emailAuthTab").onclick=()=>{S.authChannel="email";S.phoneOtpSent=false;syncAuthForm()};
 $("phoneAuthTab").onclick=()=>{S.authChannel="phone";S.phoneOtpSent=false;syncAuthForm()};
 $("authModeButton").onclick=()=>{S.authMode=S.authMode==="signin"?"signup":"signin";S.phoneOtpSent=false;syncAuthForm();$("authModeButton").textContent=S.authMode==="signup"?"Sign in instead":"Create an account";$("switchText").textContent=S.authMode==="signup"?"Already have an account?":"New to Dayflow?";};
@@ -211,7 +211,7 @@ $("authForm").onsubmit=async e=>{
    result=await S.supabase.auth.signUp({email,password,options:{data:profile}});
   }else result=await S.supabase.auth.signInWithPassword({email,password});
   if(result.error)throw result.error;
-  if(result.data.session)await enter(result.data.session);else if(S.authMode==="signup")$("authMessage").textContent="Account created. Check your email to confirm, then sign in.";else throw Error("Supabase did not return a sign-in session. Check your email confirmation status and try again.");
+  if(result.data.session)await enter(result.data.session);else $("authMessage").textContent="Account created. Check your email to confirm, then sign in.";
  }catch(error){
   const details=String(error?.message||"");
   if(S.authChannel==="phone"&&(error?.code==="sms_send_failed"||details.includes("Invalid From Number")||details.includes("21212"))){
