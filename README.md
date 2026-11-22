@@ -4,7 +4,9 @@ Dayflow is a cloud-based personal work assistant with persistent tasks, AI execu
 
 ## Implemented workflows
 
-- **Persistent workspace:** Supabase Auth, per-user workspaces, tasks, task events, execution status and saved results.
+- **Persistent workspace:** Supabase Auth, per-user workspaces, projects, tasks, task events, execution status and saved results.
+- **Assistant memory:** User-controlled saved preferences, instructions, project context and decisions. Users can review and delete saved entries.
+- **Reusable workflows:** Save repeatable instructions and launch them as real Dayflow tasks.
 - **AI task planning:** OpenRouter generates actionable plans.
 - **Research:** Tavily retrieves web sources; OpenRouter creates a sourced brief saved to the task.
 - **Documents:** OpenRouter generates Markdown documents saved with the task; users can download the Markdown file.
@@ -42,6 +44,7 @@ Keep all secrets in Vercel Environment Variables. Never commit them or paste the
 Apply migrations in order:
 1. `supabase/migrations/001_dayflow_schema.sql`
 2. `supabase/migrations/002_execution_and_google.sql`
+3. `supabase/migrations/003_workspace_intelligence.sql`
 
 The second migration adds execution metadata and the server-only Google OAuth connection tables. The Google tables have RLS enabled and intentionally have no client-facing policies.
 
@@ -57,5 +60,5 @@ The second migration adds execution metadata and the server-only Google OAuth co
 
 - Email delivery is never triggered just by generating a draft; a user must review and approve it.
 - Browser automation is limited to reading public HTTPS pages; it does not log into accounts, submit forms or make purchases.
-- Project management, billing/checkout and native DOCX/PDF export remain future product areas.
+- Billing/checkout, scheduled workflow triggers, team collaboration, and native DOCX/PDF export remain future product areas. Project records, assistant memory, and reusable workflow templates are available after migration 003.
 - Do not enable paid subscriptions until billing webhooks and server-side entitlements are implemented.
