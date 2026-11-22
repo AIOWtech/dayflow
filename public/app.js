@@ -1,4 +1,17 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+let createClient;
+async function loadSupabaseClient(){
+  if(createClient)return createClient;
+  const sources=[
+    "https://esm.sh/@supabase/supabase-js@2",
+    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
+  ];
+  let lastError;
+  for(const source of sources){
+    try{const mod=await import(source);if(typeof mod.createClient==="function"){createClient=mod.createClient;return createClient;}}
+    catch(error){lastError=error;console.warn("Supabase client source unavailable:",source,error);}
+  }
+  throw lastError||new Error("Unable to load the Supabase browser client.");
+}
 const $=id=>document.getElementById(id);
 const S={supabase:null,session:null,config:null,tasks:[],projects:[],memories:[],workflows:[],active:null,page:"overview",authMode:"signin",filter:"all",query:"",activityFilter:"all",settingsTab:"Profile",health:{},google:{connected:false,email:null,configured:false}};
 const names={overview:["Overview","A clear view of what you're working on."],tasks:["My tasks","Your tasks, progress, and finished outcomes."],projects:["Projects","Group related tasks into meaningful outcomes."],inbox:["Inbox","Your review queue for things that need a decision."],research:["Research studio","Turn questions into structured research tasks."],documents:["Documents","Create useful documents from a clear brief."],email:["Email studio","Draft carefully and review before sending."],browser:["Browser tasks","Inspect webpages and review useful findings."],analytics:["Analytics","Understand your activity and progress."],integrations:["Integrations","Connect services that power your workflow."],activity:["Activity log","A timeline of task updates and outcomes."],billing:["Plans & billing","Understand your plan and subscription status."],settings:["Settings","Manage your account and workspace preferences."],workflows:["Workflows","Save repeatable instructions and run them whenever you need."]};
@@ -7,7 +20,7 @@ const pretty=s=>String(s||"unknown").replaceAll("_"," ").replace(/\b\w/g,c=>c.to
 const date=s=>s?new Date(s).toLocaleString([],{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"}):"—";
 const icon=m=>({document:"▤",email:"✉",browser:"◉",research:"⌕",plan:"✦"}[m]||"✦");
 function toast(msg,type=""){const n=document.createElement("div");n.className=`toast ${type}`;n.textContent=msg;$("toastRegion").append(n);setTimeout(()=>n.remove(),4000)}
-async function loadConfig(){try{const r=await fetch("/api/config",{cache:"no-store"});if(!r.ok)throw Error(`Configuration endpoint returned ${r.status}`);S.config=await r.json();if(!S.config.supabaseUrl||!S.config.supabasePublishableKey){$("authMessage").textContent="Supabase isn't configured. Add the URL and publishable key in Vercel.";return}S.supabase=createClient(S.config.supabaseUrl,S.config.supabasePublishableKey);const {data,error}=await S.supabase.auth.getSession();if(error)throw error;if(data.session)await enter(data.session);else $("authMessage").textContent="Secure sign-in is ready.";S.supabase.auth.onAuthStateChange((_e,session)=>{if(session)enter(session);else{$("landingPage").hidden=false;$("authGate").hidden=true;$("appShell").hidden=true;S.session=null}})}catch(e){$("authMessage").textContent="Dayflow couldn't reach /api/config. Check Vercel routing and runtime logs.";console.error(e)}}
+async function loadConfig(){try{await loadSupabaseClient();const r=await fetch("/api/config",{cache:"no-store"});if(!r.ok)throw Error(`Configuration endpoint returned ${r.status}`);S.config=await r.json();if(!S.config.supabaseUrl||!S.config.supabasePublishableKey){$("authMessage").textContent="Supabase isn't configured. Add the URL and publishable key in Vercel.";return}S.supabase=createClient(S.config.supabaseUrl,S.config.supabasePublishableKey);const {data,error}=await S.supabase.auth.getSession();if(error)throw error;if(data.session)await enter(data.session);else $("authMessage").textContent="Secure sign-in is ready.";S.supabase.auth.onAuthStateChange((_e,session)=>{if(session)enter(session);else{$("landingPage").hidden=false;$("authGate").hidden=true;$("appShell").hidden=true;S.session=null}})}catch(e){$("authMessage").textContent="Dayflow couldn't reach /api/config. Check Vercel routing and runtime logs.";console.error(e)}}
 async function enter(session){S.session=session;$("landingPage").hidden=true;$("authGate").hidden=true;$("appShell").hidden=false;const user=session.user||{};const email=user.email||user.phone||"Your account";const meta=user.user_metadata||{};const displayName=meta.full_name||meta.name||email.split("@")[0];$("userName").textContent=displayName;$("userEmail").textContent=email;$("userAvatar").textContent=$("topAvatar").textContent=(displayName[0]||"U").toUpperCase();await Promise.all([loadHealth(),loadTasks(),loadGoogleStatus(),loadProjects(),loadMemories(),loadWorkflows()]);
 render()
                              }
