@@ -1,3 +1,8 @@
+-- Allow automatic routing as a persisted task mode.
+alter table public.tasks drop constraint if exists tasks_mode_check;
+alter table public.tasks add constraint tasks_mode_check
+  check (mode in ('auto','plan','research','document','email','browser'));
+
 -- Dayflow workspace intelligence: persistent assistant memory and reusable workflows.
 create table if not exists public.workspace_memories (
   id uuid primary key default gen_random_uuid(),
