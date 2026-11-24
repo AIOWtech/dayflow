@@ -1,5 +1,7 @@
 function fail(result){if(result.error)throw new Error(result.error.message);return result.data}
 async function workspaceId(db,userId){
+ const preference=fail(await db.from("dayflow_onboarding").select("active_workspace_id").eq("user_id",userId).maybeSingle());
+ if(preference?.active_workspace_id){const active=fail(await db.from("workspace_members").select("workspace_id").eq("workspace_id",preference.active_workspace_id).eq("user_id",userId).maybeSingle());if(active?.workspace_id)return active.workspace_id;}
  const found=fail(await db.from("workspace_members").select("workspace_id").eq("user_id",userId).limit(1));
  if(found?.length)return found[0].workspace_id;
  const created=fail(await db.from("workspaces").insert({name:"Personal workspace",owner_id:userId}).select("id").single());
