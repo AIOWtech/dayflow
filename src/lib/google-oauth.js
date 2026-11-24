@@ -353,3 +353,50 @@ export async function sendGoogleEmail(userId, { to, subject, body }) {
   }
   return { messageId: sent.id || null, threadId: sent.threadId || null };
 }
+
+
+export async function uploadGoogleDriveFile(userId, { name, mimeType, content }) {
+  const config = getConfig();
+  const db = adminClient(config);
+  const { data: connection, error } = await db
+    .from("google_connections")
+    .select("encrypted_refresh_token,scopes")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !connection?.encrypted_refresh_token) {
+    throw new Error("Connect Google in Integrations before uploading to Drive.");
+  }
+  const scopes = Array.isArray(connection.scopes) ? connection.scopes : [];
+  if (!scopes.includes("https://www.googleapis.com/auth/drive.file")) {
+    throw new Error("Reconnect Google and approve the Google Drive file permission.");
+  }
+  const refreshToken = decryptGoogleRefreshToken(connection.encrypted_refresh_token);
+  const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+    method:"POST",
+    headers:{"Content-Type":"application/x-www-form-urlencoded"},
+    body:new URLSearchParams({
+      client_id:config.GOOGLE_CLIENT_ID,
+      client_secret:config.GOOGLE_CLIENT_SECRET,
+      refresh_token:refreshToken,
+      grant_type:"refresh_token"
+    })
+  });
+  const tokens=await tokenResponse.json();
+  if(!tokenResponse.ok||!tokens.access_token)throw new Error("Google authorization expired. Reconnect Google and try again.");
+  const boundary="dayflow_"+randomBytes(18).toString("hex");
+  const metadata={name:String(name).slice(0,180),mimeType:String(mimeType||"text/markdown").slice(0,120)};
+  const body=Buffer.concat([
+    Buffer.from("--"+boundary+"\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n"+JSON.stringify(metadata)+"\r\n"),
+    Buffer.from("--"+boundary+"\r\nContent-Type: "+metadata.mimeType+"\r\n\r\n"),
+    Buffer.from(String(content),"utf8"),
+    Buffer.from("\r\n--"+boundary+"--")
+  ]);
+  const upload=await fetch("https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,webViewLink",{
+    method:"POST",
+    headers:{Authorization:"Bearer "+tokens.access_token,"Content-Type":"multipart/related; boundary="+boundary},
+    body
+  });
+  const result=await upload.json();
+  if(!upload.ok)throw new Error("Google Drive could not save the file. Reconnect Google and confirm Drive access.");
+  return {uploaded:true,fileId:result.id,name:result.name,webViewLink:result.webViewLink||null};
+}
