@@ -79,7 +79,8 @@ router.post("/tasks/:id/retry", requireUser, async (req,res) => {
 router.get("/workspaces", requireUser, async (req,res) => {
   try {
     const rows=fail(await dbFor(req).from("workspace_members").select("workspace_id,role,workspaces(id,name,owner_id,created_at)").eq("user_id",req.user.id));
-    res.json((rows||[]).map(r=>({...r.workspaces,role:r.role})));
+    const pref=fail(await dbFor(req).from("dayflow_onboarding").select("active_workspace_id").eq("user_id",req.user.id).maybeSingle());
+    res.json((rows||[]).map(r=>({...r.workspaces,role:r.role,active:r.workspace_id===pref?.active_workspace_id})));
   } catch { res.status(500).json({error:"Could not load workspaces."}); }
 });
 router.post("/workspaces", requireUser, async (req,res) => {
@@ -89,8 +90,18 @@ router.post("/workspaces", requireUser, async (req,res) => {
     const db=admin();
     const ws=fail(await db.from("workspaces").insert({name:parsed.data.name,owner_id:req.user.id}).select("id,name,owner_id,created_at").single());
     fail(await db.from("workspace_members").insert({workspace_id:ws.id,user_id:req.user.id,role:"owner"}));
-    res.status(201).json({...ws,role:"owner"});
+    fail(await db.from("dayflow_onboarding").upsert({user_id:req.user.id,active_workspace_id:ws.id,updated_at:new Date().toISOString()},{onConflict:"user_id"}));
+    res.status(201).json({...ws,role:"owner",active:true});
   } catch { res.status(500).json({error:"Could not create a team workspace. Check server service-role configuration."}); }
+});
+router.post("/workspaces/:id/activate", requireUser, async (req,res) => {
+  try {
+    const db=dbFor(req);
+    const member=fail(await db.from("workspace_members").select("workspace_id").eq("workspace_id",req.params.id).eq("user_id",req.user.id).maybeSingle());
+    if(!member)return res.status(403).json({error:"You are not a member of this workspace."});
+    fail(await db.from("dayflow_onboarding").upsert({user_id:req.user.id,active_workspace_id:req.params.id,updated_at:new Date().toISOString()},{onConflict:"user_id"}));
+    res.json({active:true,workspaceId:req.params.id});
+  } catch { res.status(500).json({error:"Could not activate this workspace."}); }
 });
 router.post("/workspaces/:id/invitations", requireUser, async (req,res) => {
   const parsed=z.object({email:z.string().trim().email().max(254),role:z.enum(["admin","member"]).default("member")}).safeParse(req.body);
@@ -113,14 +124,16 @@ router.post("/invitations/accept", requireUser, async (req,res) => {
     const invite=fail(await service.from("workspace_invitations").select("id,workspace_id,invited_email,role").eq("token_hash",hash).is("accepted_at",null).gt("expires_at",now).maybeSingle());
     if(!invite)return res.status(404).json({error:"Invitation is invalid, expired, or already used."});
     if(String(req.user.email||"").toLowerCase()!==invite.invited_email)return res.status(403).json({error:"Sign in with the email address that received this invitation."});
-    fail(await service.from("workspace_members").upsert({workspace_id:invite.workspace_id,user_id:req.user.id,role:invite.role},{onConflict:"workspace_id,user_id"}));
+    const existing=fail(await service.from("workspace_members").select("role").eq("workspace_id",invite.workspace_id).eq("user_id",req.user.id).maybeSingle());
+    if(!existing)fail(await service.from("workspace_members").insert({workspace_id:invite.workspace_id,user_id:req.user.id,role:invite.role}));
     fail(await service.from("workspace_invitations").update({accepted_at:now}).eq("id",invite.id).is("accepted_at",null));
+    fail(await service.from("dayflow_onboarding").upsert({user_id:req.user.id,active_workspace_id:invite.workspace_id,updated_at:now},{onConflict:"user_id"}));
     res.json({accepted:true,workspaceId:invite.workspace_id});
   } catch { res.status(500).json({error:"Could not accept this invitation."}); }
 });
 
 router.post("/connectors/google/drive/upload", requireUser, async (req,res) => {
-  const parsed=z.object({name:z.string().trim().min(1).max(180),mimeType:z.string().trim().max(120).default("text/markdown"),content:z.string().min(1).max(500000)}).safeParse(req.body);
+  const parsed=z.object({name:z.string().trim().min(1).max(180),mimeType:z.string().trim().regex(/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/i).max(120).default("text/markdown"),content:z.string().min(1).max(500000)}).safeParse(req.body);
   if(!parsed.success)return res.status(400).json({error:"Provide a file name and non-empty content (maximum 500 KB)."});
   try { res.json(await uploadGoogleDriveFile(req.user.id,parsed.data)); }
   catch(e) { res.status(502).json({error:e.message||"Google Drive upload failed."}); }
