@@ -41,6 +41,7 @@ import {
   sendGoogleEmail,
 } from "./lib/google-oauth.js";
 import { executeTask } from "./lib/executor.js";
+import productUpgrades from "./lib/product-upgrades.js";
 import { listProjects, createProject, listMemories, createMemory, deleteMemory, listWorkflows, createWorkflow, deleteWorkflow } from "./lib/workspace-intelligence.js";
 
 app.locals.supabase = createAuthClient();
@@ -607,6 +608,8 @@ app.delete("/api/workflows/:id", requireUser, async (req,res) => {
  try { const removed=await deleteWorkflow(userDb(req),req.params.id); if(!removed)return res.status(404).json({error:"Workflow not found."}); res.json({deleted:true}); }
  catch(error) { console.error("Delete workflow:",error.message); res.status(500).json({error:"Could not delete workflow."}); }
 });
+
+app.use("/api", productUpgrades);
 
 app.use("/api", (_req, res) => {
   res.status(404).json({ error: "API endpoint not found." });
