@@ -25,6 +25,7 @@ create table if not exists public.dayflow_onboarding (
   user_id uuid primary key references auth.users(id) on delete cascade,
   completed_at timestamptz,
   dismissed_at timestamptz,
+  active_workspace_id uuid references public.workspaces(id) on delete set null,
   updated_at timestamptz not null default now()
 );
 alter table public.dayflow_onboarding enable row level security;
