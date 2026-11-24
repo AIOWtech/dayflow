@@ -127,8 +127,12 @@ function fillExportContent() { $("dfExportContent").value=resultText(selectedTas
 async function taskAction(action) {
   const id=$("dfTaskControl").value;if(!id)return;
   const status=$("dfTaskStatus");status.textContent="Working…";
-  try { const result=await window.Dayflow.api("/api/tasks/"+id+"/"+action,{method:"POST"});status.textContent=action==="retry"?"Task reset and ready for a new attempt. Open the task and run it again.":"Task cancelled.";await loadTasks(); }
-  catch(e){status.textContent=e.message;}
+  try {
+    await window.Dayflow.api("/api/tasks/"+id+"/"+action,{method:"POST"});
+    if(action==="retry"){await window.Dayflow.api("/api/tasks/"+id+"/run",{method:"POST"});status.textContent="Task retry finished. Refresh the task list to see the result.";}
+    else status.textContent="Task cancelled."; 
+    await loadTasks();
+  } catch(e){status.textContent=e.message;}
 }
 function printableHtml(text) {
   const escaped=escapeHtml(text);
