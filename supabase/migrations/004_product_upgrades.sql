@@ -14,6 +14,7 @@ create table if not exists public.notifications (
 create index if not exists notifications_user_unread_idx
   on public.notifications(user_id, created_at desc) where read_at is null;
 alter table public.notifications enable row level security;
+grant select, update on public.notifications to authenticated;
 drop policy if exists "users read own notifications" on public.notifications;
 create policy "users read own notifications" on public.notifications
 for select to authenticated using (user_id = auth.uid());
@@ -29,6 +30,7 @@ create table if not exists public.dayflow_onboarding (
   updated_at timestamptz not null default now()
 );
 alter table public.dayflow_onboarding enable row level security;
+grant select, insert, update on public.dayflow_onboarding to authenticated;
 drop policy if exists "users manage own onboarding" on public.dayflow_onboarding;
 create policy "users manage own onboarding" on public.dayflow_onboarding
 for all to authenticated using (user_id = auth.uid()) with check (user_id = auth.uid());
@@ -49,7 +51,10 @@ create index if not exists workspace_invitations_workspace_idx
 alter table public.workspace_invitations enable row level security;
 -- Invitation reads/writes are performed only by the trusted server using the service role.
 
-create or replace function public.dayflow_notify_task_event()
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+
+create or replace function private.dayflow_notify_task_event()
 returns trigger
 language plpgsql
 security definer
@@ -60,6 +65,9 @@ declare
   notification_title text;
   notification_kind text;
 begin
+  if auth.uid() is distinct from new.actor_id then
+    raise exception 'Task event actor does not match the authenticated user.';
+  end if;
   select * into task_row from public.tasks where id = new.task_id;
   if not found then return new; end if;
 
@@ -82,8 +90,8 @@ begin
   return new;
 end;
 $$;
-revoke all on function public.dayflow_notify_task_event() from public;
+revoke all on function private.dayflow_notify_task_event() from public, anon, authenticated;
 drop trigger if exists dayflow_task_event_notification on public.task_events;
 create trigger dayflow_task_event_notification
 after insert on public.task_events
-for each row execute function public.dayflow_notify_task_event();
+for each row execute function private.dayflow_notify_task_event();
