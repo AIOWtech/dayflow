@@ -103,7 +103,7 @@ async function refreshAll() {
 async function loadNotifications() {
   const rows = await window.Dayflow.api("/api/notifications");
   $("dfNotificationList").innerHTML = rows.length ? rows.map(n => `
-    <article class="df-item"><div class="df-row"><b>${escapeHtml(n.title)}</b><span class="tag ${escapeHtml(n.kind)}">${n.read_at?"Read":"New"}</span><span class="df-status">${new Date(n.created_at).toLocaleString()}</span></div><p>${escapeHtml(n.message)}</p>${!n.read_at?`<button class="df-btn" data-read="${escapeHtml(n.id)}">Mark read</button>`:""}${n.task_id?` <button class="df-btn" data-open-task="${escapeHtml(n.task_id)}">Task ID: ${escapeHtml(n.task_id.slice(0,8))}</button>`:""}</article>`).join("") : '<div class="df-empty">You are all caught up. New task activity will appear here.</div>';
+    <article class="df-item"><div class="df-row"><b>${escapeHtml(n.title)}</b><span class="tag ${escapeHtml(n.kind)}">${n.read_at?"Read":"New"}</span><span class="df-status">${new Date(n.created_at).toLocaleString()}</span></div><p>${escapeHtml(n.message)}</p>${!n.read_at?`<button class="df-btn" data-read="${escapeHtml(n.id)}">Mark read</button>`:""}</article>`).join("") : '<div class="df-empty">You are all caught up. New task activity will appear here.</div>';
   $("dfNotificationList").querySelectorAll("[data-read]").forEach(b=>b.onclick=async()=>{await window.Dayflow.api("/api/notifications/"+b.dataset.read+"/read",{method:"POST"});await loadNotifications();});
 }
 async function loadTasks() {
@@ -180,7 +180,7 @@ async function activateWorkspace() {
 }
 async function createWorkspace() {
   const name=$("dfWorkspaceName").value.trim();if(!name)return;
-  try{await window.Dayflow.api("/api/workspaces",{method:"POST",body:JSON.stringify({name})});$("dfTeamStatus").textContent="Workspace created.";await loadWorkspaces();}
+  try{await window.Dayflow.api("/api/workspaces",{method:"POST",body:JSON.stringify({name})});$("dfTeamStatus").textContent="Workspace created. Reloading into the new workspace…";location.reload();}
   catch(e){$("dfTeamStatus").textContent=e.message;}
 }
 async function inviteMember() {
