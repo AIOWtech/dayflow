@@ -171,7 +171,7 @@ async function uploadDrive() {
 }
 async function loadWorkspaces() {
   currentWorkspaces=await window.Dayflow.api("/api/workspaces");
-  $("dfWorkspaceSelect").innerHTML=currentWorkspaces.map(w=>`<option value="${escapeHtml(w.id)}">${escapeHtml(w.name)} · ${escapeHtml(w.role)}</option>`).join("")||'<option value="">No workspaces</option>';
+  $("dfWorkspaceSelect").innerHTML=currentWorkspaces.map(w=>'<option value="'+escapeHtml(w.id)+'" '+(w.active?"selected":"")+' >'+escapeHtml(w.name)+' · '+escapeHtml(w.role)+(w.active?" · Active":"")+'</option>').join("")||'<option value="">No workspaces</option>';
 }
 async function activateWorkspace() {
   const id=$("dfWorkspaceSelect").value;if(!id)return;
