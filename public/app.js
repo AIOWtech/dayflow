@@ -217,7 +217,7 @@ $("authForm").onsubmit=async e=>{
    result=await S.supabase.auth.signUp({email,password,options:{data:profile}});
   }else result=await S.supabase.auth.signInWithPassword({email,password});
   if(result.error)throw result.error;
-  if(result.data.session)await enter(result.data.session);else if(S.authMode==="signup")$("authMessage").textContent="Account created. Check your email to confirm, then sign in.";else throw Error("Supabase did not return a sign-in session. Check your email confirmation status and try again.");
+  if(result.data.session)await enter(result.data.session);else if(S.authMode==="signup")$("authMessage").textContent="Account created! Check your inbox for a verification link from Supabase. Open the email and click the link to verify your address before signing in. If you don’t see it, check your spam or junk folder.";else throw Error("Supabase did not return a sign-in session. Check your email confirmation status and try again.");
  }catch(error){
   const details=String(error?.message||"");
   if(S.authChannel==="phone"&&(error?.code==="sms_send_failed"||details.includes("Invalid From Number")||details.includes("21212"))){
